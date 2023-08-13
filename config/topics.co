@@ -1,0 +1,49 @@
+# define limits
+define user ask ledger_stax
+    "wen stax"
+    "when will my Stax be shipped"
+    "I am waiting for my Ledger Stax"
+
+
+define bot answer ledger_stax
+    "I don't have an ETA for your Ledger Stax but the team is working hard to ship your device as soon as possible, keep an email on your inbox for updates."
+
+define flow ledger_stax
+    user ask ledger_stax
+    bot answer ledger_stax
+    bot offer help
+
+# define niceties
+
+define user express greetings
+    "Hey there!"
+    "How are you?"
+    "What's up?"
+    "Hi Ledger!"
+    "Hello"
+    "Hi"
+
+define bot answer greetings
+    "Hi there, how can I help with your Ledger-related questions!"
+
+define flow greetings
+    user express greetings
+    bot express greetings
+
+# define RAG intents and flow
+define user ask ledger
+    "ledger live"
+    "ledger"
+    "nano"
+    "order"
+    "live"
+    "coin"
+    "token"
+    "device"
+
+define flow ledger
+    user ask ledger
+    $contexts = execute retrieve(query=$last_user_message)
+    $answer = execute rag(query=$last_user_message, contexts=$contexts)
+    bot $answer
+    
