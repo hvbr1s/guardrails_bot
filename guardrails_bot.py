@@ -17,6 +17,7 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 import httpx
 from nostril import nonsense
 import tiktoken
+from nemoguardrails import LLMRails, RailsConfig
 
 main.load_dotenv()
 
@@ -45,6 +46,8 @@ index = pinecone.Index(index_name)
 
 embed_model = "text-embedding-ada-002"
 
+
+# Chat system prompt
 primer = """
 
 You are Samantha, a highly intelligent and helpful virtual assistant designed to support Ledger. Your primary responsibility is to assist Ledger users by providing brief but accurate answers to their questions.
@@ -73,10 +76,72 @@ Begin!
 
 """
 
+yaml_content = """
+models:
+- type: main
+  engine: openai
+  model: text-davinci-003
+"""
+
+rag_colang_content = """
+# define limits
+define user ask ledger_stax
+    "wen stax"
+    "when will my Stax be shipped"
+    "I am waiting for my Ledger Stax"
+
+
+define bot answer ledger_stax
+    "I don't have an ETA for your Ledger Stax but the team is working hard to ship your device as soon as possible, keep an email on your inbox for updates."
+
+define flow ledger_stax
+    user ask ledger_stax
+    bot answer ledger_stax
+    bot offer help
+
+# define niceties
+
+define user express greetings
+    "Hey there!"
+    "How are you?"
+    "What's up?"
+    "Hi Ledger!"
+
+define bot express greetings
+    "Hi there, how can I help with Ledger-related questions!"
+
+define flow greetings
+    user express greetings
+    bot express greetings
+
+# define RAG intents and flow
+define user ask ledger
+    "ledger live"
+    "ledger"
+    "nano"
+    "order"
+    "live"
+    "coin"
+    "token"
+
+define flow ledger
+    user ask ledger
+    $contexts = execute retrieve(query=$last_user_message)
+    $answer = execute rag(query=$last_user_message, contexts=$contexts)
+    bot $answer
+"""
+
 # #####################################################
 
-tokenizer = tiktoken.get_encoding('cl100k_base')
+# Initialize Rails config
+config = RailsConfig.from_content(
+    colang_content=rag_colang_content,
+    yaml_content=yaml_content
+)
+# Create Rails
+rag_rails = LLMRails(config)
 
+tokenizer = tiktoken.get_encoding('cl100k_base')
 # create the length function
 def tiktoken_len(text):
     tokens = tokenizer.encode(
@@ -132,7 +197,6 @@ async def pinecone_index():
 @app.post('/gpt')
 @limiter.limit("10/minute")
 async def react_description(query: Query, request: Request, api_key: str = Depends(get_api_key)): #New
-    global last_response
     user_id = query.user_id
     user_input = query.user_input.strip()
     if user_id not in user_states:
@@ -146,7 +210,7 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
         try:
 
             # Retrieve relevant chunks from Pinecone and build augmented query
-            async def retrieve(user_input):
+            async def retrieve(query, contexts=None):
                 res_embed = openai.Embedding.create(
                     input=[user_input],
                     engine=embed_model
@@ -161,7 +225,7 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
             augmented_query = await retrieve(user_input)
             print(augmented_query)
     
-            async def rag(augmented_query):
+            async def rag(query, contexts=None):
                 print("RAG > Called!")
                 res = openai.ChatCompletion.create(
                     temperature=0.0,
@@ -171,12 +235,14 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
                         {"role": "system", "content": primer},
                         {"role": "user", "content": augmented_query}
                     ]
-                )
-                
+                )             
                 reply = res['choices'][0]['message']['content']
                 return reply
             
-            response = await rag(augmented_query)
+            #response = await rag(augmented_query)
+            rag_rails.register_action(action=retrieve, name="retrieve")
+            rag_rails.register_action(action=rag, name="rag")
+            response = await rag_rails.generate_async(prompt=user_input)
 
             # Counting tokens
             count_response = tiktoken_len(response)
