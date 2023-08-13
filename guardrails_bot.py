@@ -17,7 +17,7 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 import httpx
 from nostril import nonsense
 import tiktoken
-from nemoguardrails import LLMRails, RailsConfig
+from nemoguardrails import LLMRails, RailsConfig #New
 
 main.load_dotenv()
 
@@ -76,60 +76,14 @@ Begin!
 
 """
 
-yaml_content = """
-models:
-- type: main
-  engine: openai
-  model: text-davinci-003
-"""
+# Function to read content from a file
+def read_file_content(file_path):
+    with open(file_path, "r") as f:
+        return f.read()
+    
+yaml_content = read_file_content("/home/danledger/knowledge_bot/config/config.yml")
+rag_colang_content = read_file_content("/home/danledger/knowledge_bot/config/topics.co")
 
-rag_colang_content = """
-# define limits
-define user ask ledger_stax
-    "wen stax"
-    "when will my Stax be shipped"
-    "I am waiting for my Ledger Stax"
-
-
-define bot answer ledger_stax
-    "I don't have an ETA for your Ledger Stax but the team is working hard to ship your device as soon as possible, keep an email on your inbox for updates."
-
-define flow ledger_stax
-    user ask ledger_stax
-    bot answer ledger_stax
-    bot offer help
-
-# define niceties
-
-define user express greetings
-    "Hey there!"
-    "How are you?"
-    "What's up?"
-    "Hi Ledger!"
-
-define bot express greetings
-    "Hi there, how can I help with Ledger-related questions!"
-
-define flow greetings
-    user express greetings
-    bot express greetings
-
-# define RAG intents and flow
-define user ask ledger
-    "ledger live"
-    "ledger"
-    "nano"
-    "order"
-    "live"
-    "coin"
-    "token"
-
-define flow ledger
-    user ask ledger
-    $contexts = execute retrieve(query=$last_user_message)
-    $answer = execute rag(query=$last_user_message, contexts=$contexts)
-    bot $answer
-"""
 
 # #####################################################
 
