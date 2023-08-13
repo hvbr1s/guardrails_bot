@@ -17,7 +17,7 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 import httpx
 from nostril import nonsense
 import tiktoken
-from nemoguardrails import LLMRails, RailsConfig #New
+from nemoguardrails import LLMRails, RailsConfig
 
 main.load_dotenv()
 
@@ -133,7 +133,6 @@ async def custom_rate_limit_exceeded_handler(request: Request, exc: RateLimitExc
 
 # Initialize user state
 user_states = {}
-
 
 # Define FastAPI endpoints
 @app.get("/")
