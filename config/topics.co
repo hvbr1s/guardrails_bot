@@ -1,20 +1,47 @@
 # define limits
 define user ask ledger_stax
     "wen stax"
-    "when will my Stax be shipped"
+    "when will my Stax be shipped?"
     "I am waiting for my Ledger Stax"
-
+    "where is my Stax?"
 
 define bot answer ledger_stax
-    "I don't have an ETA for your Ledger Stax but the team is working hard to ship your device as soon as possible, keep an email on your inbox for updates."
+    "Hi there - working around the clock to prepare your Ledger Stax. As soon as it's ready, we'll send a notification to the email you provided during your pre-order."
 
 define flow ledger_stax
     user ask ledger_stax
     bot answer ledger_stax
     bot offer help
 
-# define niceties
+# define cancel_stax
+define user ask cancel_stax
+    "I want to cancel my Ledger Stax"
+    "I want to cancel my Stax order"
+    "I don't want my Stax anymore"
 
+define bot answer cancel_stax
+    "I will need to connect you to a live agent. Please use the buttons below to open a ticket or choose the live chat option if it's available."
+define flow cancel_stax
+    user ask cancel_stax
+    bot answer cancel_stax
+
+#define reach_human
+define user ask reach_human
+    "I need to talk to an agent"
+    "Can you connect me with a human agent"
+    "I want to talk to your manager"
+    "Please escalate to a person or human agent"
+    "I don't want to speak with a robot"
+    "I want to speak to a human agent"
+
+define bot answer reach_human
+    "Certainly! I'll connect you to a live agent. Please use the buttons below to open a ticket or choose the live chat option if it's available."
+
+define flow reach_human
+    user ask reach_human
+    bot answer reach_human
+
+# define niceties
 define user express greetings
     "Hey there!"
     "How are you?"
@@ -28,7 +55,23 @@ define bot answer greetings
 
 define flow greetings
     user express greetings
-    bot express greetings
+    bot answer greetings
+
+# define thankies
+define user express thanks
+    "Thanks"
+    "Thank you"
+    "Appreciate it"
+    "Thanks a lot"
+    "Take care"
+
+define bot answer thankies
+    "You're welcome, is there anything else I can help you with?"
+
+define flow thankies
+    user express thanks
+    bot answer thankies
+
 
 # define RAG intents and flow
 define user ask ledger
@@ -40,6 +83,23 @@ define user ask ledger
     "coin"
     "token"
     "device"
+    "crypto"
+    "money"
+    "account"
+    "app"
+    "nano x"
+    "nano s"
+    "nano s plus"
+    "supported"
+    "support"
+    "shipping"
+    "stake"
+    "recovery phrase"
+    "PIN"
+    "passphrase"
+    "passcode"
+    "password"
+    
 
 define flow ledger
     user ask ledger
