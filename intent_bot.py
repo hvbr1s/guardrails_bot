@@ -40,8 +40,8 @@ class Query(BaseModel):
 openai.api_key=os.environ['OPENAI_API_KEY']
 pinecone.init(api_key=os.environ['PINECONE_API_KEY'], enviroment=os.environ['PINECONE_ENVIRONMENT'])
 pinecone.whoami()
-index_name = 'hc'
-#index_name = 'academyzd'
+#index_name = 'hc'
+index_name = 'academyzd'
 index = pinecone.Index(index_name)
 
 embed_model = "text-embedding-ada-002"
@@ -81,8 +81,8 @@ def read_file_content(file_path):
     with open(file_path, "r") as f:
         return f.read()
     
-yaml_content = read_file_content("/home/danledger/knowledge_bot/config/config.yml")
-rag_colang_content = read_file_content("/home/danledger/knowledge_bot/config/topics.co")
+yaml_content = read_file_content("/home/dan/bots/config/config.yml")
+rag_colang_content = read_file_content("/home/dan/bots/config/topics.co")
 
 
 # #####################################################
@@ -115,8 +115,6 @@ def get_user_id(request: Request):
 
 # Define FastAPI app
 app = FastAPI()
-# app.mount("/static", StaticFiles(directory="static"), name="./home/dan/langchain_projects/hcBot/static/BBALP00A.TTF")
-# templates = Jinja2Templates(directory="templates")
 
 # Define limiter
 limiter = Limiter(key_func=get_user_id)
@@ -169,7 +167,7 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
                     engine=embed_model
                 )
                 xq = res_embed['data'][0]['embedding']
-                res_query = index.query(xq, top_k=2, include_metadata=True)
+                res_query = index.query(xq, top_k=3, include_metadata=True)
                 contexts = [(item['metadata']['text'] + "\nLearn more: " + item['metadata'].get('source', 'N/A')) for item in res_query['matches'] if item['score'] > 0.80]
                 prev_response_line = f"Assistant: {last_response}\n" if last_response else ""
                 augmented_query = "CONTEXT: " + "\n\n-----\n\n" + "\n\n---\n\n".join(contexts) + "\n\n-----\n\n"+ "CHAT HISTORY: \n" + prev_response_line + "User: " + user_input + "\n" + "Assistant: "
@@ -192,10 +190,13 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
                 reply = res['choices'][0]['message']['content']
                 return reply
             
-            #response = await rag(augmented_query)
-            rag_rails.register_action(action=retrieve, name="retrieve")
-            rag_rails.register_action(action=rag, name="rag")
-            response = await rag_rails.generate_async(prompt=user_input)
+            # Classic RAG Response
+            response = await rag(augmented_query)
+            
+            # RAG + Guardrails
+            # rag_rails.register_action(action=retrieve, name="retrieve")
+            # rag_rails.register_action(action=rag, name="rag")
+            # response = await rag_rails.generate_async(prompt=user_input)
 
             # Counting tokens
             count_response = tiktoken_len(response)
@@ -225,4 +226,4 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
             raise HTTPException(status_code=400, detail="Invalid input")
         
 # Start command
-# uvicorn app_test:app --reload --port 8008
+# uvicorn intent_bot:app --reload --port 8800
