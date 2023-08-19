@@ -18,6 +18,7 @@ import httpx
 from nostril import nonsense
 import tiktoken
 from nemoguardrails import LLMRails, RailsConfig
+from langsmith.run_helpers import traceable
 
 main.load_dotenv()
 
@@ -46,11 +47,10 @@ index = pinecone.Index(index_name)
 
 embed_model = "text-embedding-ada-002"
 
-
 # Chat system prompt
 primer = """
 
-You are Samantha, a highly intelligent and helpful virtual assistant designed to support Ledger. Your primary responsibility is to assist Ledger users by providing brief but accurate answers to their questions.
+You are Ledger Bot, a highly intelligent and helpful virtual assistant designed to support Ledger. Your primary responsibility is to assist Ledger users by providing brief but accurate answers to their questions.
 
 Users may ask about various Ledger products, including the Nano X (Bluetooth, large storage, has a battery), Nano S Plus (large storage, no Bluetooth, no battery), Ledger Stax, and the Ledger Live app.
 The official Ledger store is located at https://shop.ledger.com/. For authorized resellers, please visit https://www.ledger.com/reseller/. Do not modify or share any other links for these purposes.
@@ -65,7 +65,9 @@ VERY IMPORTANT:
 - If the user greets or thanks you, respond cordially and invite Ledger-related questions.
 - Always present URLs as plain text, never use markdown formatting.
 - If a user requests to speak with a human agent or if you believe they should speak to a human agent, don't share any links, instead invite them to open a ticket or start a live chat.
-- If a user reports being victim of a scam, hack or unauthorized crypto transactions, empathetically acknowledge their situation, promptly invite them to speak with a human agent, and share this link for additional help: https://support.ledger.com/hc/en-us/articles/7624842382621-Loss-of-funds?support=true.
+- If a user reports being victim of a scam, airdrop scam, hack or unauthorized crypto transactions, empathetically acknowledge their situation, promptly invite them to speak with a human agent, and share this link for additional help: https://support.ledger.com/hc/en-us/articles/7624842382621-Loss-of-funds?support=true.
+- Beware of scams posing as Ledger or Ledger endorsements. We don't support airdrops.
+- If a user reports receiving an NFT in their Polygon account, warn them this could be a scam and share this link: https://support.ledger.com/hc/en-us/articles/8473509294365-Beware-of-address-poisoning-scams
 - If a user needs to reset their device, they must always ensure they have their recovery phrase on hand before proceeding with the reset.
 - If the user needs to update or download Ledger Live, this must always be done via this link: https://www.ledger.com/ledger-live
 - If asked about Ledger Stax, inform the user it's not yet released, but pre-orderers will be notified via email when ready to ship. Share this link for more details: https://support.ledger.com/hc/en-us/articles/7914685928221-Ledger-Stax-FAQs.
@@ -81,8 +83,8 @@ def read_file_content(file_path):
     with open(file_path, "r") as f:
         return f.read()
     
-yaml_content = read_file_content("/home/dan/bots/config/config.yml")
-rag_colang_content = read_file_content("/home/dan/bots/config/topics.co")
+yaml_content = read_file_content("./config/config.yml")
+rag_colang_content = read_file_content("./config/topics.co")
 
 
 # #####################################################
@@ -159,6 +161,7 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
     else:
     
         try:
+            
 
             # Retrieve relevant chunks from Pinecone and build augmented query
             async def retrieve(query, contexts=None):
@@ -175,7 +178,8 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
             
             augmented_query = await retrieve(user_input)
             print(augmented_query)
-    
+
+            @traceable(run_type="chain")
             async def rag(query, contexts=None):
                 print("RAG > Called!")
                 res = openai.ChatCompletion.create(
@@ -189,6 +193,7 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
                 )             
                 reply = res['choices'][0]['message']['content']
                 return reply
+            
             
             # Classic RAG Response
             response = await rag(augmented_query)
@@ -210,7 +215,8 @@ async def react_description(query: Query, request: Request, api_key: str = Depen
             print("Total tokens: " + str(final_count))
             total_price = str(((total_input_tokens / 1000) * 0.03) + ((total_output_tokens / 1000) * 0.06))
             print("Total price for GPT4 call: " + total_price + " $USD")
-    
+                        
+            
             # Save the response to the global variable
             last_response = response
     
